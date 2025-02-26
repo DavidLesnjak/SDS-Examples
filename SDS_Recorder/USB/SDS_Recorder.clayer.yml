@@ -1,0 +1,24 @@
+layer:
+  type: SDS_Recorder
+  description: SDS recording via USB Device VCOM (MDK USBD)
+
+  connections:
+    - connect: SDS Recorder
+      consumes:
+        - CMSIS_USBD
+        - CMSIS-RTOS2
+      provides:
+        - SDS_Recorder
+        - SDS_Buffer
+
+  packs:
+    - pack: ARM::SDS@^1.1.0
+    - pack: Keil::MDK-Middleware@^8.0.0
+
+  components:
+    - component: ARM::SDS:Buffer
+    - component: ARM::SDS:IO:VCOM&MDK USB
+    - component: SDS:Recorder&CMSIS-RTOS2
+    - component: USB&MDK:CORE
+    - component: USB&MDK:Device
+    - component: USB&MDK:Device:CDC
