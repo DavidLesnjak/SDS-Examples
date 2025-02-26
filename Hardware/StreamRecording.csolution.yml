@@ -1,0 +1,48 @@
+# A solution is a collection of related projects that share same base configuration.
+solution:
+  created-for: CMSIS-Toolbox@2.7.0
+  cdefault:
+
+  # List of tested compilers that can be selected
+  select-compiler:
+    - compiler: AC6
+    - compiler: GCC
+    - compiler: IAR
+
+  # List the packs that define the device and/or board.
+  packs:
+    - pack: ARM::CMSIS
+    - pack: ARM::SDS
+
+  # List different hardware targets that are used to deploy the solution.
+  target-types:
+    - type: STM32H735G-DK_NETWORK
+      device: STM32H735IGKx
+      board: STM32H735G-DK:Rev.B
+      variables:
+        - Board-Layer: ../../Boards/STM32H735G-DK/Board.clayer.yml
+        - SDS_Recorder-Layer: ../../SDS_Recorder/Network/SDS_Recorder.clayer.yml
+    - type: STM32H735G-DK_USB
+      device: STM32H735IGKx
+      board: STM32H735G-DK:Rev.B
+      variables:
+        - Board-Layer: ../../Boards/STM32H735G-DK/Board.clayer.yml
+        - SDS_Recorder-Layer: ../../SDS_Recorder/USB/SDS_Recorder.clayer.yml
+
+  # List of different build configurations.
+  build-types:
+    - type: Debug
+      debug: on
+      optimize: none
+
+    - type: Release
+      debug: off
+      optimize: balanced
+
+  # List related projects.
+  projects:
+    - project: TestData/TestData.cproject.yml
+    - project: ModelTest/ModelTest.cproject.yml
+    # - project: ModelSensor/ModelSensor.cproject.yml
+
+  compiler: AC6

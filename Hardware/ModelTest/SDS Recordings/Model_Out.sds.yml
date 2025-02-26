@@ -1,0 +1,17 @@
+sds:
+  name: Model Output
+  description: Results of classification every 2 seconds
+  frequency: 0.5
+  content:
+    - value: idle
+      type:  float
+      unit:  probability
+    - value: snake
+      type:  float
+      unit:  probability
+    - value: updown
+      type:  float
+      unit:  probability
+    - value: wave
+      type:  float
+      unit:  probability
