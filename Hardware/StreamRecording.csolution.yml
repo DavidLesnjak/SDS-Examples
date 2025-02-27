@@ -16,6 +16,12 @@ solution:
 
   # List different hardware targets that are used to deploy the solution.
   target-types:
+    - type: STM32H743I-EVAL_NETWORK
+      device: STM32H743XIHx
+      board: STMicroelectronics::STM32H743I-EVAL
+      variables:
+        - Board-Layer: ../../Boards/STM32H743I-EVAL/Board.clayer.yml
+        - SDS_Interface-Layer: ../../SDS_Interface/Network/SDS_Interface.clayer.yml
     - type: STM32H735G-DK_NETWORK
       device: STM32H735IGKx
       board: STM32H735G-DK:Rev.B

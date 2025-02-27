@@ -1,0 +1,23 @@
+sds:
+  name: Data Input
+  description: IMU sensor with 3000Hz sample rate
+  frequency: 3000
+  content:
+  - value: acc-x
+    type: uint16_t
+    unit: G
+  - value: acc-y
+    type: uint16_t
+    unit: G
+  - value: acc-z
+    type: uint16_t
+    unit: G
+  - value: gy-x
+    type: uint16_t
+    unit: G
+  - value: gy-y
+    type: uint16_t
+    unit: G
+  - value: gy-z
+    type: uint16_t
+    unit: G

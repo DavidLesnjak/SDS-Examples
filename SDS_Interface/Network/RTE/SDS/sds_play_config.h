@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Arm Limited. All rights reserved.
+ * Copyright (c) 2023-2024 Arm Limited. All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -15,29 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Name:    sdsio_config_socket.h
- * Purpose: SDS IO via Socket (IoT Utility:Socket) configuration options
- * Rev.:    V1.0.0
+ * Name:    sds_play_config.h
+ * Purpose: SDS Player configuration options
+ * Rev.:    V2.0.0
  */
 
 //-------- <<< Use Configuration Wizard in Context Menu >>> --------------------
 
-// <h>SDS IO via Socket (IoT Utility:Socket)
+// <h>SDS Player
 
-//   <s.16>SDSIO-Server IP
-//   <i>SDSIO socket server IPv4 address
-//   <i>Default: "0.0.0.0"
-#define SDSIO_SERVER_IP           "192.168.1.102"
+//   <o>Maximum number of player streams <1-31>
+//   <i>Default: 16
+#define SDS_PLAY_MAX_STREAMS    16U
 
-//   <o>SDSIO-Server port
-//   <i>SDSIO socket server port
-//   <i>Default: 5050
-#define SDSIO_SERVER_PORT         5050U
-
-//   <o>Socket receive timeout
-//   <i>Socket receive timeout in ms
-//   <i>Default: 5000
-#define SDSIO_SOCKET_RECEIVE_TOUT 5000U
+//   <o>Size of a temporary player buffer
+//   <i>Default: 8192
+#define SDS_PLAY_BUF_SIZE       8192U
 
 // </h>
 

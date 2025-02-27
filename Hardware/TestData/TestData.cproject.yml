@@ -7,6 +7,7 @@ project:
         - CMSIS-RTOS2
       consumes:
         - SDS_Recorder
+        - CMSIS_VIO
         - STDIN
         - STDOUT
         - STDERR
@@ -24,9 +25,11 @@ project:
     - group: Documentation
       files:
         - file: README.md
-    - group: Source
+    - group: Application
       files:
         - file: TestData.c
+        - file: app_main.c
+        - file: rec_management.c
 
   layers:
     - layer: $Board-Layer$

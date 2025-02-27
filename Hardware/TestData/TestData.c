@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2022-2025 Arm Limited. All rights reserved.
+ * Copyright (c) 2025 Arm Limited. All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -18,14 +18,15 @@
 
 #include <stdio.h>
 
+#include "RTE_Components.h"
+
 #include "cmsis_os2.h"
 #include "cmsis_vio.h"
-#include "main.h"
-#include "sds_rec.h"
 
-static uint8_t rec_ibuf[1500];
-static uint8_t rec_obuf[500];
-static int32_t stop_req = 0;
+#include "main.h"
+#include "os_tick.h"
+#include "rec_management.h"
+#include "sds_rec.h"
 
 // IMU sensor buffer
 struct IMU {
@@ -41,22 +42,20 @@ struct IMU {
   } gyroscpe;
 } imu_buf[30];
 
-// Output ML buffer
+// ML output buffer
 struct OUT {
   struct {
     uint16_t x;
     uint16_t y;
-  } ml;
-} out_buf[10];
+  } out;
+} ml_buf[10];
 
-// Idle time counter in ms
-uint32_t idle_ms = 0;
+// Idle tick counter in sixteenths of ms
+static uint32_t cnt_idle = 0;
 
-// External functions
-extern int32_t socket_startup(void);
-__WEAK int32_t socket_startup(void) {
-  return 0;
-}
+// Processor usage in percentage (%)
+// Add this variable in debugger watch window
+float cpu_usage;
 
 // Create dummy test data
 static void CreateTestData () {
@@ -85,112 +84,61 @@ static void CreateTestData () {
   // ML output data
   for (i = 0; i < 10; i++) {
     val = (index_out + i) % 1000;
-    out_buf[i].ml.x = val;
-    out_buf[i].ml.y = val % 500;
+    ml_buf[i].out.x = val;
+    ml_buf[i].out.y = val % 500;
   }
   index_out = (index_out + i) % 1000;
 }
 
-// CPU usage (in %)
-static void cpu_usage(void) {
+// Calculate CPU usage in percentage
+static void calc_cpu_usage(void) {
   static uint32_t cnt;
-  float usage;
 
-  if ((++cnt % 50) == 0) {
-    uint32_t tick = osKernelGetTickCount();
-    usage = ((float)(tick - idle_ms) * 100) / tick;
-    printf("CPU Time: %.1fs, usage: %.2f%%\r\n", (float)tick/1000, usage);
+  // Usage calculation interval is 3 seconds
+  if (++cnt >= 300) {
+    cpu_usage = (float)(48000 - cnt_idle) / 480.0;
+    cnt_idle = cnt = 0;
   }
 }
 
-// Generator thread for simulated data
-static __NO_RETURN void threadTestData(void *argument) {
-  sdsRecId_t *in, *out;
+// Thread for generating simulated data
+__NO_RETURN void threadTestData(void *argument) {
   uint32_t n, timestamp;
-  int32_t i;
   (void)argument;
 
-  in  = sdsRecOpen("In", rec_ibuf, sizeof(rec_ibuf), 3*(sizeof(imu_buf)+8));
-  out = sdsRecOpen("Out", rec_obuf, sizeof(rec_obuf), 10*(sizeof(out_buf)+8));
-
-  printf("Recording started\r\n");
   timestamp = osKernelGetTickCount();
   for (;;) {
-    if (stop_req) {
-      sdsRecClose(in);
-      sdsRecClose(out);
+    if (recActive != 0U) {
+      CreateTestData();
 
-      printf("Recording stopped\r\n");
-      stop_req = 0;
-      osThreadExit();
-    }
+      n = sdsRecWrite(recIdDataInput, timestamp, &imu_buf, sizeof(imu_buf));
+      REC_ASSERT(n == sizeof(imu_buf));
 
-    CreateTestData();
-    n = sdsRecWrite(in, timestamp, &imu_buf, sizeof(imu_buf));
-    if (n != sizeof(imu_buf)) {
-      printf("In: Recorder write failed\r\n");
+      n = sdsRecWrite(recIdDataOutput, timestamp, &ml_buf, sizeof(ml_buf));
+      REC_ASSERT(n == sizeof(ml_buf));
     }
-    n = sdsRecWrite(out, timestamp, &out_buf, sizeof(out_buf));
-    if (n != sizeof(out_buf)) {
-      printf("Out: Recorder write failed\r\n");
+    else {
+      recDone = 1U;
     }
+    calc_cpu_usage();
+
     timestamp += 10U;
     osDelayUntil(timestamp);
   }
 }
 
-// Demo task
-static __NO_RETURN void demo(void *argument) {
-  uint32_t state = 0;
-  int32_t  active = 0;
-  (void)argument;
-
-  printf("Starting SDS recorder...\r\n");
-
-  if (socket_startup() != 0) {
-    printf("Socket startup failed\r\n");
-    osThreadExit();
-  }
-
-  // Initialize recorder
-  sdsRecInit(NULL);
-
-  for (;;) {
-    // BUTTON0 toggles recording on/off
-    if (state != vioGetSignal(vioBUTTON0)) {
-      state ^= vioBUTTON0;
-      if (state == vioBUTTON0) {
-        if (!active) osThreadNew(threadTestData, NULL, NULL);
-        else         stop_req = 1;
-        active ^= 1;
-      }
-    }
-    osDelay(100U);
-    cpu_usage();
-  }
-}
-
 // Measure system idle time
 __NO_RETURN void osRtxIdleThread(void *argument) {
+  uint32_t tick, next = 0xFFFFFFFF;
   (void)argument;
-  uint32_t ticks, prev;
 
-  prev = osKernelGetTickCount();
   for (;;) {
     __WFI();
-    ticks = osKernelGetTickCount();
-    if (ticks == (prev + 1)) {
-      // Count only full idle tick intervals
-      idle_ms++;
+    tick = osKernelGetTickCount();
+    if (tick == next) {
+      // Counts in sixteenths of an interval
+      cnt_idle += (16 - 16*OS_Tick_GetCount()/OS_Tick_GetInterval());
     }
-    prev = ticks;
+    next = tick + 1;
   }
-}
-
-// Application initialize
-int32_t app_main(void) {
-  osKernelInitialize();
-  osThreadNew(demo, NULL, NULL);
-  osKernelStart();
-  return 0;
 }
