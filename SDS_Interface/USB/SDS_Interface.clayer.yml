@@ -8,8 +8,10 @@ layer:
         - CMSIS_USBD
         - CMSIS-RTOS2
       provides:
-        - SDS_Recorder
         - SDS_Buffer
+        - SDS_Recorder
+        - SDS_Player
+        - SDS_IO
 
   packs:
     - pack: ARM::SDS@^1.1.0
@@ -19,6 +21,7 @@ layer:
     - component: ARM::SDS:Buffer
     - component: ARM::SDS:IO:VCOM&MDK USB
     - component: SDS:Recorder&CMSIS-RTOS2
+    - component: SDS:Player&CMSIS-RTOS2
     - component: USB&MDK:CORE
     - component: USB&MDK:Device
     - component: USB&MDK:Device:CDC
