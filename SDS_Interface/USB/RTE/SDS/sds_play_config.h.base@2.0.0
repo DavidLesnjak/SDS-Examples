@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2023 Arm Limited. All rights reserved.
+ * Copyright (c) 2023-2024 Arm Limited. All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
  *
@@ -15,19 +15,22 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  *
- * Name:    sdsio_config_vcom_mdk.h
- * Purpose: SDS IO via USB Virtual COM Port (Keil::USB:Device:CDC) configuration options
- * Rev.:    V1.0.0
+ * Name:    sds_play_config.h
+ * Purpose: SDS Player configuration options
+ * Rev.:    V2.0.0
  */
 
 //-------- <<< Use Configuration Wizard in Context Menu >>> --------------------
 
-// <h>SDS IO via USB Virtual COM Port (Keil::USB:Device:CDC)
+// <h>SDS Player
 
-//   <o>USB Device index <0-255>
-//   <i>Index of USB Device
-//   <i>Default: 0
-#define SDSIO_USB_DEVICE_INDEX  0U
+//   <o>Maximum number of player streams <1-31>
+//   <i>Default: 16
+#define SDS_PLAY_MAX_STREAMS    16U
+
+//   <o>Size of a temporary player buffer
+//   <i>Default: 8192
+#define SDS_PLAY_BUF_SIZE       8192U
 
 // </h>
 
