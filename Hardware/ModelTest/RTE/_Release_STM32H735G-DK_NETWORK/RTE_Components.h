@@ -27,6 +27,8 @@
 /* ARM::SDS:IO:Socket@1.0.1 */
 #define RTE_SDS_IO                       /* Synchronous Data Stream Input/Output */
 #define RTE_SDS_IO_SOCKET                /* Synchronous Data Stream Input/Output (Socket) */
+/* ARM::SDS:Player&CMSIS-RTOS2@2.0.0 */
+#define RTE_SDS_PLAYER                  /* Synchronous Data Stream Player */
 /* ARM::SDS:Recorder&CMSIS-RTOS2@2.0.0 */
 #define RTE_SDS_RECORDER                /* Synchronous Data Stream Recorder */
 /* Keil::CMSIS Driver:Ethernet MAC@3.0.0 */

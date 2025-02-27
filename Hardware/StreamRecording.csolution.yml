@@ -21,13 +21,13 @@ solution:
       board: STM32H735G-DK:Rev.B
       variables:
         - Board-Layer: ../../Boards/STM32H735G-DK/Board.clayer.yml
-        - SDS_Recorder-Layer: ../../SDS_Recorder/Network/SDS_Recorder.clayer.yml
+        - SDS_Interface-Layer: ../../SDS_Interface/Network/SDS_Interface.clayer.yml
     - type: STM32H735G-DK_USB
       device: STM32H735IGKx
       board: STM32H735G-DK:Rev.B
       variables:
         - Board-Layer: ../../Boards/STM32H735G-DK/Board.clayer.yml
-        - SDS_Recorder-Layer: ../../SDS_Recorder/USB/SDS_Recorder.clayer.yml
+        - SDS_Interface-Layer: ../../SDS_Interface/USB/SDS_Interface.clayer.yml
 
   # List of different build configurations.
   build-types:

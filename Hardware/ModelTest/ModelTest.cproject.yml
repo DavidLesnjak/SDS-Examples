@@ -46,5 +46,5 @@ project:
     - layer: model/model.clayer.yml
     - layer: $Board-Layer$
       type:  Board
-    - layer: $SDS_Recorder-Layer$
-      type:  SDS_Recorder
+    - layer: $SDS_Interface-Layer$
+      type:  SDS_Interface
