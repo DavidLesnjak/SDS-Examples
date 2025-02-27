@@ -19,7 +19,7 @@
 #include "cmsis_os2.h"
 
 #include "ei_main.h"
-#include "recorder_sds.h"
+#include "rec_management.h"
 
 /*-----------------------------------------------------------------------------
  * ML inference thread
@@ -33,23 +33,12 @@ __NO_RETURN void threadMLInference (void *argument) {
 }
 
 /*-----------------------------------------------------------------------------
- * Recording control thread
- *----------------------------------------------------------------------------*/
-__NO_RETURN void threadRecControl (void *argument) {
-  (void)argument;
-
-  rec_control();
-
-  for (;;);
-}
-
-/*-----------------------------------------------------------------------------
  * Application main function
  *----------------------------------------------------------------------------*/
 int app_main (void) {
   osKernelInitialize();
-  osThreadNew(threadMLInference, NULL, NULL);
-  osThreadNew(threadRecControl,  NULL, NULL);
+  osThreadNew(threadMLInference,   NULL, NULL);
+  osThreadNew(threadRecManagement, NULL, NULL);
   osKernelStart();
   return 0;
 }

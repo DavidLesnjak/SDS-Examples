@@ -16,8 +16,8 @@
  * limitations under the License.
  */
 
-#ifndef RECORDER_SDS_H_
-#define RECORDER_SDS_H_
+#ifndef REC_MANAGEMENT_H_
+#define REC_MANAGEMENT_H_
 
 #include <stdint.h>
 
@@ -29,7 +29,7 @@ extern "C"
 #include "sds_rec.h"
 
 // Assert macro
-#define sds_assert(cond)        if (((cond) == false) && (sds_error.occurred == 0U)) { sds_error.occurred = 1U; sds_error.file = __FILE__; sds_error.line = __LINE__; }
+#define REC_ASSERT(cond)        if (((cond) == false) && (recError.occurred == 0U)) { recError.occurred = 1U; recError.file = __FILE__; recError.line = __LINE__; }
 
 // Recorder error information structure
 typedef struct {
@@ -37,20 +37,20 @@ typedef struct {
   uint8_t     reported;
   const char *file;
   uint32_t    line;
-} sds_error_t;
+} recError_t;
 
 // Recorder error information
-extern sds_error_t sds_error;
+extern recError_t       recError;
 
 // Recorder active status
 extern volatile uint8_t recActive;
 
 // Recorder identifiers
-extern sdsRecId_t recId_model_in;
-extern sdsRecId_t recId_model_out;
+extern sdsRecId_t       recIdModelInput;
+extern sdsRecId_t       recIdModelOutput;
 
-// Recording control
-extern void rec_control (void);
+// Recording management thread function
+extern void threadRecManagement (void *argument);
 
 #ifdef  __cplusplus
 }

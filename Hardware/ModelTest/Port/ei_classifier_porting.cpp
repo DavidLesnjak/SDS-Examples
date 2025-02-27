@@ -55,7 +55,7 @@ EI_IMPULSE_ERROR ei_run_impulse_check_canceled()
 EI_IMPULSE_ERROR ei_sleep(int32_t time_ms)
 {
 #ifdef RTE_CMSIS_RTOS2
-    osDelay((uint32_t)((((uint64_t)time_ms) * osKernelGetTickFreq())/1000UL));
+    (void)osDelay((uint32_t)((((uint64_t)time_ms) * osKernelGetTickFreq())/1000UL));
 #else
     uint64_t start_time = ei_read_timer_ms();
 

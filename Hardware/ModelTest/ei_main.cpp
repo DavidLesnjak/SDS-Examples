@@ -21,7 +21,10 @@
 #include "model-parameters/model_variables.h"
 #include "features.h"
 #include "cmsis_os2.h"
-#include "recorder_sds.h"
+#include "rec_management.h"
+
+// Timestamp of read of input data for inference
+uint32_t timestamp;
 
 /**
  * @brief      Get raw features from the static features array
@@ -32,8 +35,9 @@ int raw_feature_get_data(size_t offset, size_t length, float *out_ptr)
 
     // If recording is active then record model input data
     if (recActive != 0U) {
-      uint32_t num = sdsRecWrite(recId_model_in, osKernelGetTickCount(), features + offset, length * sizeof(float));
-      sds_assert(num == (length * sizeof(float)));
+      timestamp = osKernelGetTickCount();
+      uint32_t num = sdsRecWrite(recIdModelInput, timestamp, features + offset, length * sizeof(float));
+      REC_ASSERT(num == (length * sizeof(float)));
     }
 
     return 0;
@@ -96,8 +100,8 @@ extern "C" int ei_main(void)
           }
 
           // Record model output data
-          uint32_t num = sdsRecWrite(recId_model_out, osKernelGetTickCount(), model_out_results, EI_CLASSIFIER_NN_OUTPUT_COUNT * sizeof(float));
-          sds_assert(num == (EI_CLASSIFIER_NN_OUTPUT_COUNT * sizeof(float)));
+          uint32_t num = sdsRecWrite(recIdModelOutput, timestamp, model_out_results, EI_CLASSIFIER_NN_OUTPUT_COUNT * sizeof(float));
+          REC_ASSERT(num == (EI_CLASSIFIER_NN_OUTPUT_COUNT * sizeof(float)));
         }
 
         ei_sleep(2000);

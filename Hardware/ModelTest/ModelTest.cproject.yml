@@ -1,5 +1,5 @@
 project:
-  description: Record data with ML model and test data
+  description: Record ML input and output data
 
   connections:
     - connect: Model Test demo
@@ -36,7 +36,7 @@ project:
         - file: features.h
         - file: app_main.c
         - file: ei_main.cpp
-        - file: recorder_sds.c
+        - file: rec_management.c
     - group: Port
       files:
         - file: ./Port/ei_classifier_porting.cpp
@@ -45,6 +45,6 @@ project:
   layers:
     - layer: model/model.clayer.yml
     - layer: $Board-Layer$
-      type: Board
+      type:  Board
     - layer: $SDS_Recorder-Layer$
-      type: SDS_Recorder
+      type:  SDS_Recorder
