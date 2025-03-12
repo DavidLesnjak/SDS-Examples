@@ -34,6 +34,13 @@ solution:
       variables:
         - Board-Layer:         $SolutionDir()$/../Boards/STM32H735G-DK/Board.clayer.yml
         - SDS_Interface-Layer: $SolutionDir()$/../SDS_Interface/USB/SDS_Interface.clayer.yml
+    - type: Alif_DevKit-E7
+      board: Alif Semiconductor::DevKit-E7
+      device: Alif Semiconductor::AE722F80F55D5LS:M55_HP
+      variables:
+        - Board-Layer:         $SolutionDir()$/../Boards/Alif_DevKit-E7/M55_HP/Board.clayer.yml
+        - SDS_Interface-Layer: $SolutionDir()$/../SDS_Interface/Network/SDS_Interface.clayer.yml
+        - Sensor-Layer:        $SolutionDir()$/../Sensors/Alif_DevKit-E7/Sensor.clayer.yml
 
   # List of different build configurations.
   build-types:

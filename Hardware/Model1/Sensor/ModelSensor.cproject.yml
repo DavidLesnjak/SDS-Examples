@@ -51,3 +51,5 @@ project:
       type:  Board
     - layer: $SDS_Interface-Layer$
       type:  SDS_Interface
+    - layer: $Sensor-Layer$
+      type:  Sensor
