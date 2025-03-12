@@ -1,0 +1,27 @@
+layer:
+  type: Sensor
+  description: Accelerometer and Gyroscope sensor driver for Alif DevKit E7
+  for-board: Alif Semiconductor::DevKit-E7:Gen 2
+
+  connections:
+    - connect: Accelerometer and Gyroscope sensor
+      provides:
+        - SENSOR_ACCELEROMETER
+        - SENSOR_GYROSCOPE
+
+  packs:
+    - pack: AlifSemiconductor::Ensemble@^2.0.0-0
+
+  components:
+    - component: Device:SOC Peripherals:I3C
+
+  add-path:
+    - ./Include
+    - ./Config
+
+  groups:
+    - group: Sensor
+      files:
+        - file: ./Source/bmi323_icm42670.c
+        - file: ./Source/i2c_over_i3c.c
+        - file: ./Source/sensor_drv.c
