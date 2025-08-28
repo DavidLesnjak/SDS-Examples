@@ -27,7 +27,7 @@ extern "C"
 {
 #endif
 
-#include "sds_rec.h"
+#include "sds_rec_play.h"
 
 // Assert macro
 #ifndef NDEBUG
@@ -51,8 +51,8 @@ extern sdsError_t       sdsError;
 extern volatile uint8_t recActive;
 
 // Recorder identifiers
-extern sdsRecId_t       recIdModelInput;
-extern sdsRecId_t       recIdModelOutput;
+extern sdsRecPlayId_t   recIdModelInput;
+extern sdsRecPlayId_t   recIdModelOutput;
 
 // Recording management thread function
 extern void threadRecManagement (void *argument);

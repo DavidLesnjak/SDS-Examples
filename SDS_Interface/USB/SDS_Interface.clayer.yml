@@ -14,7 +14,7 @@ layer:
         - SDS_IO
 
   packs:
-    - pack: ARM::SDS@^1.1.0
+    - pack: ARM::SDS@^2.0.0-1
     - pack: Keil::MDK-Middleware@^8.0.0
 
   components:

@@ -7,5 +7,8 @@
                 "debug": "CMSIS Debugger: pyOCD"
             }
         }
+    ],
+    "clangd.arguments": [
+        "--compile-commands-dir=d:\\GitHub\\ARM-Examples\\sds-examples\\Hardware\\out\\ModelPlay\\STM32H735G-DK_NETWORK\\Debug"
     ]
 }
