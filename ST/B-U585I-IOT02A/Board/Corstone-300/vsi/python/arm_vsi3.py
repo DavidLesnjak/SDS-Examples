@@ -32,15 +32,42 @@ import yaml
 
 logger = logging.getLogger(__name__)
 
+# Add custom APP level between INFO and WARNING
+APP_LEVEL = 25
+logging.addLevelName(APP_LEVEL, "APP")
+
 ## Set verbosity level
 #verbosity = logging.DEBUG
 #verbosity = logging.INFO
+verbosity = APP_LEVEL
 #verbosity = logging.WARNING
-verbosity = logging.ERROR
+#verbosity = logging.ERROR
 
-# [debugging] Verbosity settings
-level = { 10: "DEBUG",  20: "INFO",  30: "WARNING",  40: "ERROR" }
-logging.basicConfig(format='Py: VSI3: [%(levelname)s]\t%(message)s', level = verbosity)
+def app(self, message, *args, **kwargs):
+    if self.isEnabledFor(APP_LEVEL):
+        self._log(APP_LEVEL, message, args, **kwargs)
+logging.Logger.app = app
+
+level = { 10: "DEBUG",  20: "INFO",  25: "APP", 30: "WARNING", 40: "ERROR" }
+level_map = {
+    "DEBUG"   : "[D]",
+    "INFO"    : "[I]",
+    "WARNING" : "[W]",
+    "ERROR"   : "[E]",
+    "APP"     : "   ",
+}
+class CustomFormatter(logging.Formatter):
+    def format(self, record):
+        # Replace levelname with mapped value from level_map
+        record.levelname = level_map.get(record.levelname, record.levelname)
+        return super().format(record)
+
+handler = logging.FileHandler("sdsio.log", mode='w')
+handler.setFormatter(CustomFormatter('%(levelname)s\t%(message)s'))
+logger.addHandler(handler)
+logger.setLevel(verbosity)
+
+logger.app(f"Created by {path.abspath(__file__)}\n")
 logger.info("Verbosity level is set to " + level[verbosity])
 
 
@@ -109,18 +136,39 @@ class IndexAllocator:
         return idx
 
 class StreamManager:
+    """
+    Manages streaming data and associated resources.
+    """
+
     def __init__(self, work_dir: str = None):
-        # Initialize manager using provided work_dir or current directory if None.
+        # Initialize the StreamManager instance.
         self._stream_id = 0
         base_dir = work_dir if work_dir else os.getcwd()
         self._opened_streams = {}           # sid -> (file_obj, name, mode)
         self._stream_indexes = {}           # stream name -> IndexAllocator
 
+        # Load SDSIO configuration from sdsio.yml configuration file
         dir_path, idx_start, idx_end, idx_list = self._load_sdsio_config(base_dir)
         self._sds_dir   = dir_path          # directory that stores SDS files
         self._idx_start = idx_start
         self._idx_end   = idx_end
         self._idx_list  = idx_list
+
+    def _format_stream_path(self, fname) -> str:
+        try:
+            base_dir = os.getcwd()
+            p = os.path.relpath(fname, base_dir)
+            # If file is outside base_dir, relpath starts with '..' (e.g., '../foo' or '..\foo')
+            if p == os.pardir or p.startswith(os.pardir + os.sep):
+                return os.path.abspath(fname)
+        except Exception:
+            # Different drives on Windows or other relpath issues → use absolute
+            return fname
+
+        # p is relative here; add ./ or .\ for clarity if not already present
+        if p.startswith("./") or p.startswith(".\\"):
+            return p
+        return (".\\" if os.sep == "\\" else "./") + p
 
     @staticmethod
     def _load_sdsio_config(base_dir: str) -> Tuple[str, int, int, Optional[List[int]]]:
@@ -141,20 +189,20 @@ class StreamManager:
                 break
 
         # defaults
-        dir_path: str = workdir_abs
+        dir_path:  str = workdir_abs
         idx_start: int = 0
-        idx_end: int = NO_LIMIT
-        idx_list: Optional[List[int]] = None
+        idx_end:   int = NO_LIMIT
+        idx_list:  Optional[List[int]] = None
 
         if cfg_path is None:
-            logger.info(f"No sdsio.yml configuration file. Default values will be used.")
+            logger.info("sdsio.yml: No sdsio.yml configuration file. Default values will be used.")
             return dir_path, idx_start, idx_end, idx_list
 
         with open(cfg_path, "r", encoding="utf-8") as f:
             try:
                 data = yaml.safe_load(f) or {}
             except:
-                logger.warning(f"Failed to parse '{path.basename(cfg_path)}'. Default values will be used.")
+                logger.warning(f"sdsio.yml: Failed to parse '{path.basename(cfg_path)}'. Default values will be used.")
 
         # dir
         if "dir" in data and data["dir"] is not None:
@@ -175,11 +223,11 @@ class StreamManager:
                         try:
                             os.makedirs(dir_path_abs, exist_ok=True)
                             dir_path = dir_path_abs
-                            logger.info(f"sdsio.yml: directory '{dir_path_abs}' did not exist and was created.")
+                            logger.info(f"sdsio.yml: Directory '{dir_path_abs}' did not exist and was created.")
                         except Exception:
-                            logger.warning(f"sdsio.yml: failed to create directory '{dir_path_abs}'. Default value will be used: {dir_path}.")
+                            logger.warning(f"sdsio.yml: Failed to create directory '{dir_path_abs}'. Default value will be used: {dir_path}.")
                     else:
-                        logger.warning(f"sdsio.yml: directory '{dir_path_abs}' does not exist. Default value will be used: {dir_path}.")
+                        logger.warning(f"sdsio.yml: Directory '{dir_path_abs}' does not exist. Default value will be used: {dir_path}.")
                 else:
                     dir_path = dir_path_abs
 
@@ -197,7 +245,7 @@ class StreamManager:
                 if idx_start < 0:
                     logger.warning(f"sdsio.yml: 'idx-start' must be >= 0. Default value will be used: {idx_start}.")
 
-        # idx-end  (missing => NO_LIMIT; if present must be >= 0)
+        # idx-end
         if "idx-end" in data and data["idx-end"] is not None:
             v = data["idx-end"]
             if isinstance(v, bool):
@@ -209,8 +257,10 @@ class StreamManager:
                     logger.warning(f"sdsio.yml: 'idx-end' must be an integer. Default value will be used: {idx_end}.")
                 if idx_end < 0:
                     logger.warning(f"sdsio.yml: 'idx-end' must be >= 0. Default value will be used: {idx_end}.")
+                if idx_end < idx_start:
+                    logger.warning(f"sdsio.yml: 'idx-end' must be >= idx_start. Default value will be used: {idx_end}.")
 
-        # idx-list (overrides start/end if present and non-empty)
+        # idx-list
         if "idx-list" in data and data["idx-list"] is not None:
             lst_err = False
             lst = data["idx-list"]
@@ -258,23 +308,24 @@ class StreamManager:
             # Get new index
             idx = self._stream_indexes[name].get_idx()
             if idx is None:
+                logger.warning(f"Stream {name} open failed. No available index.")
                 return 0
 
             fname = path.join(self._sds_dir, f"{name}.{idx}.sds")
+            file_path = self._format_stream_path(fname)
 
             if mode == 1:
                 # write mode
-                logger.debug(f"Opening stream for writing: {fname}")
                 f = open(fname, 'wb')
                 self._stream_id += 1
                 sid = self._stream_id
-                logger.debug(f"Opened new stream for writing: {fname}")
+                logger.app(f"Record:   {name} ({file_path}).")
 
             else:
                 # read mode:
                 if path.exists(fname):
                     f = open(fname, 'rb')
-                    logger.debug(f"Opened stream for reading: {fname}")
+                    logger.app(f"Playback: {name} ({file_path}).")
                     self._stream_id += 1
                     sid = self._stream_id
                 else:
@@ -285,7 +336,7 @@ class StreamManager:
             return sid
 
         except Exception:
-            logger.exception("Failed to open stream")
+            logger.error(f"Failed to open stream: {name}")
             return 0
 
     def close(self, sid: int) -> bool:
@@ -300,7 +351,7 @@ class StreamManager:
             f.close()
             return True
         except Exception:
-            logger.exception(f"Error closing stream {name} (ID {sid})")
+            logger.error(f"Error closing stream: {name} (ID {sid})")
             return False
 
     def write(self, sid: int, data: bytes) -> bool:
@@ -316,7 +367,7 @@ class StreamManager:
             f.flush()
             return True
         except Exception:
-            logger.exception(f"Write error on stream ID {sid}")
+            logger.error(f"Write error on stream ID {sid}")
             return False
 
     def read(self, sid: int, size: int) -> tuple[bytes, bool]:
