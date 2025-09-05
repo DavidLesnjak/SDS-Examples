@@ -32,43 +32,27 @@ import yaml
 
 logger = logging.getLogger(__name__)
 
-# Add custom APP level between INFO and WARNING
-APP_LEVEL = 25
+# Add custom APP
+APP_LEVEL = 45
 logging.addLevelName(APP_LEVEL, "APP")
 
 ## Set verbosity level
 #verbosity = logging.DEBUG
 #verbosity = logging.INFO
-verbosity = APP_LEVEL
 #verbosity = logging.WARNING
-#verbosity = logging.ERROR
+verbosity = logging.ERROR
+#verbosity = APP_LEVEL
 
 def app(self, message, *args, **kwargs):
     if self.isEnabledFor(APP_LEVEL):
         self._log(APP_LEVEL, message, args, **kwargs)
 logging.Logger.app = app
 
-level = { 10: "DEBUG",  20: "INFO",  25: "APP", 30: "WARNING", 40: "ERROR" }
-level_map = {
-    "DEBUG"   : "[D]",
-    "INFO"    : "[I]",
-    "WARNING" : "[W]",
-    "ERROR"   : "[E]",
-    "APP"     : "   ",
-}
-class CustomFormatter(logging.Formatter):
-    def format(self, record):
-        # Replace levelname with mapped value from level_map
-        record.levelname = level_map.get(record.levelname, record.levelname)
-        return super().format(record)
+level = { 10: "DEBUG",  20: "INFO", 30: "WARNING", 40: "ERROR", 45: "APP" }
+logging.basicConfig(format='%(message)s', level = verbosity, filename = 'sdsio.log', filemode = 'w')
 
-handler = logging.FileHandler("sdsio.log", mode='w')
-handler.setFormatter(CustomFormatter('%(levelname)s\t%(message)s'))
-logger.addHandler(handler)
-logger.setLevel(verbosity)
-
+# sdsio.log created by arm_vsi3.py
 logger.app(f"Created by {path.abspath(__file__)}\n")
-logger.info("Verbosity level is set to " + level[verbosity])
 
 
 # IRQ registers
@@ -153,6 +137,7 @@ class StreamManager:
         self._idx_start = idx_start
         self._idx_end   = idx_end
         self._idx_list  = idx_list
+        self._rec_play  = {1: "Record:   ", 0: "Playback: "}
 
     def _format_stream_path(self, fname) -> str:
         try:
@@ -195,7 +180,7 @@ class StreamManager:
         idx_list:  Optional[List[int]] = None
 
         if cfg_path is None:
-            logger.info("sdsio.yml: No sdsio.yml configuration file. Default values will be used.")
+            logger.warning("sdsio.yml: No configuration file. Default values will be used.")
             return dir_path, idx_start, idx_end, idx_list
 
         with open(cfg_path, "r", encoding="utf-8") as f:
@@ -203,6 +188,7 @@ class StreamManager:
                 data = yaml.safe_load(f) or {}
             except:
                 logger.warning(f"sdsio.yml: Failed to parse '{path.basename(cfg_path)}'. Default values will be used.")
+                data = {}
 
         # dir
         if "dir" in data and data["dir"] is not None:
@@ -292,12 +278,18 @@ class StreamManager:
         # Open a stream in read (mode=0) or write (mode=1).
         # Returns a non-zero stream ID on success, or 0 on error.
         logger.debug(f"Open name={name}, mode={mode}")
+
+        # Check mode
+        if mode not in (0, 1):
+            logger.app(f"ERROR:    Open failed. Invalid mode for stream: {name}.")
+            return 0
+
         try:
             if not name or any(ch in name for ch in '"*/:<>?\\|'):
-                logger.warning(f"Invalid stream name: {name}")
+                logger.app(f"{self._rec_play[mode]} {name} - ERROR. Invalid name.")
                 return 0
             if name in (n for (_, n, _) in self._opened_streams.values()):
-                logger.warning(f"Stream already open: {name}")
+                logger.app(f"{self._rec_play[mode]} {name} - ERROR. Already open.")
                 return 0
 
             # Check if stream name already has an IndexAllocator, else create one
@@ -308,7 +300,7 @@ class StreamManager:
             # Get new index
             idx = self._stream_indexes[name].get_idx()
             if idx is None:
-                logger.warning(f"Stream {name} open failed. No available index.")
+                logger.app(f"{self._rec_play[mode]} {name} - ACCESS REJECTED. Index excluded in sdsio.yml")
                 return 0
 
             fname = path.join(self._sds_dir, f"{name}.{idx}.sds")
@@ -319,13 +311,13 @@ class StreamManager:
                 f = open(fname, 'wb')
                 self._stream_id += 1
                 sid = self._stream_id
-                logger.app(f"Record:   {name} ({file_path}).")
+                logger.app(f"{self._rec_play[mode]} {name} ({file_path}).")
 
             else:
                 # read mode:
                 if path.exists(fname):
                     f = open(fname, 'rb')
-                    logger.app(f"Playback: {name} ({file_path}).")
+                    logger.app(f"{self._rec_play[mode]} {name} ({file_path}).")
                     self._stream_id += 1
                     sid = self._stream_id
                 else:
@@ -336,7 +328,7 @@ class StreamManager:
             return sid
 
         except Exception:
-            logger.error(f"Failed to open stream: {name}")
+            logger.app(f"{self._rec_play[mode]} {name} - ERROR. Failed to open.")
             return 0
 
     def close(self, sid: int) -> bool:
@@ -344,46 +336,53 @@ class StreamManager:
         # Returns True on success, False if invalid ID.
         entry = self._opened_streams.pop(sid, None)
         if not entry:
-            logger.error(f"Invalid stream ID on close: {sid}")
+            logger.app(f"ERROR:    Close failed. Invalid stream ID: {sid}.")
             return False
-        f, name, _ = entry
+        f, name, mode = entry
         try:
             f.close()
+            logger.app(f"Closed:    {name}.")
             return True
         except Exception:
-            logger.error(f"Error closing stream: {name} (ID {sid})")
+            logger.app(f"{self._rec_play[mode]} {name} - ERROR. Failed to close.")
             return False
 
     def write(self, sid: int, data: bytes) -> bool:
         # Write raw bytes to an open write stream.
         # Returns True on success, False otherwise.
         entry = self._opened_streams.get(sid)
-        if not entry or entry[2] != 1:
-            logger.error(f"Invalid write operation on stream ID: {sid}")
+        if not entry:
+            logger.app(f"ERROR:    Write failed. Invalid stream ID: {sid}.")
             return False
-        f = entry[0]
+        f, name, mode = entry
+        if mode != 1:
+            logger.app(f"{self._rec_play[mode]} {name} - ERROR. Not opened for write.")
+            return False
         try:
             f.write(data)
             f.flush()
             return True
         except Exception:
-            logger.error(f"Write error on stream ID {sid}")
+            logger.app(f"{self._rec_play[mode]} {name} - ERROR. Failed to write.")
             return False
 
     def read(self, sid: int, size: int) -> tuple[bytes, bool]:
         # Read up to `size` bytes from an open read stream.
         # Returns a tuple (data, eof) where `eof` is True if end-of-stream reached.
         entry = self._opened_streams.get(sid)
-        if not entry or entry[2] != 0:
-            logger.error(f"Invalid read operation on stream ID: {sid}")
+        if not entry:
+            logger.app(f"ERROR:    Read failed. Invalid stream ID: {sid}.")
             return b'', True
-        f = entry[0]
+        f, name, mode = entry
+        if mode != 0:
+            logger.app(f"{self._rec_play[mode]} {name} - ERROR. Not opened for read.")
+            return b'', True
         try:
             data = f.read(size)
             eof = not data
             return data, eof
         except Exception:
-            logger.exception(f"Read error on stream ID {sid}")
+            logger.app(f"{self._rec_play[mode]} {name} - ERROR. Failed to read.")
             return b'', True
 
     def clean(self):
@@ -402,7 +401,7 @@ def processCOMMAND(command):
     cmd = { 1: "CMD_OPEN", 2: "CMD_CLOSE", 3: "CMD_WRITE", 4: "CMD_READ" }
 
     if not command in cmd:
-        logger.info(f"Unknown COMMAND: {command}")
+        logger.app(f"ERROR:    Unknown COMMAND: {command}.")
         return 0
 
     logger.info(f"Processing {cmd[command]}")
@@ -542,7 +541,7 @@ def rdRegs(index):
         value = ARGUMENT
         logger.debug(f"Read ARGUMENT: {value}")
     else:
-        logging.debug(f"User register {index} not used")
+        logger.debug(f"User register {index} not used")
         value = 0
 
     return value
@@ -565,7 +564,7 @@ def wrRegs(index, value):
         ARGUMENT = value
         logger.debug(f"Write ARGUMENT: {value}")
     else:
-        logging.debug(f"User register {index} not used")
+        logger.debug(f"User register {index} not used")
 
     return value
 
